@@ -1,7 +1,8 @@
 module.exports = {
     env: {
         es6: true, // sets the 'ecmaVersion' parser option to 6
-        node: true
+        node: true,
+        browser: true
     },
     extends: ['eslint:recommended'],
     plugins: ['import'],

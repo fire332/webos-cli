@@ -166,9 +166,7 @@ function queryInfo(queryFile) {
     question.default = queries[q].default;
     questions.push(question);
   }
-  return inquirer.prompt(questions, function (answers) {
-    return answers;
-  });
+  return inquirer.prompt(questions);
 }
 
 function generate() {

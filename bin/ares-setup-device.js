@@ -7,7 +7,7 @@
  */
 
 const async = require('async'),
-    inquirer = require('inquirer'),
+    inquirer = require('inquirer').default,
     nopt = require('nopt'),
     abbrev = require("abbrev"),
     log = require('npmlog'),
@@ -164,7 +164,7 @@ function _queryAddRemove(ssdpDevices, next) {
             });
 
             questions = [{
-                type: "list",
+                type: "select",
                 name: "discovered",
                 message: "Select",
                 choices: Object.keys(ssdpDevMap)
@@ -180,14 +180,14 @@ function _queryAddRemove(ssdpDevices, next) {
                 return (device.name);
             });
             questions = [{
-                type: "list",
+                type: "select",
                 name: "op",
                 message: "Select",
                 choices: function() {
                     if (ssdpDevice) {
                         if (ssdpDevice.op === 'modify') return inqChoices;
                         else return ['add'];
-                    } 
+                    }
                     if (deviceNames.length > 1) return totChoices;
                     // deveice list has emulator only > unsupported remove option
                     return inqChoices.concat(dfChoices);
@@ -197,7 +197,7 @@ function _queryAddRemove(ssdpDevices, next) {
                 },
                 default: function() {
                     if (ssdpDevice && ssdpDevice.op) return ssdpDevice.op;
-                    else return null;
+                    return undefined;
                 }
             }, {
                 type: "input",
@@ -208,7 +208,7 @@ function _queryAddRemove(ssdpDevices, next) {
                 },
                 default: function() {
                     if (ssdpDevice && ssdpDevice.name) return ssdpDevice.name;
-                    else return null;
+                    return undefined;
                 },
                 validate: function(input) {
                     if (input.length < 1) {
@@ -223,7 +223,7 @@ function _queryAddRemove(ssdpDevices, next) {
                     return true;
                 }
             }, {
-                type: "list",
+                type: "select",
                 name: "device_name",
                 message: "Select a device",
                 choices: deviceNames.filter(dv => dv !== "emulator"),
@@ -231,7 +231,7 @@ function _queryAddRemove(ssdpDevices, next) {
                     return (["remove"].indexOf(answers.op) !== -1 && !ssdpDevice);
                 }
             }, {
-                type: "list",
+                type: "select",
                 name: "device_name",
                 message: "Select a device",
                 choices: deviceNames,
@@ -316,16 +316,12 @@ function _queryDeviceInfo(selDevice, next) {
             return _needInq(mode)(inqChoices);
         }
     }, {
-        type: "list",
+        type: "select",
         name: "auth_type",
         message: "Select authentication",
         choices: ["password", "ssh key"],
         default: function() {
-            let idx = 0;
-            if (selDevice.privateKeyName) {
-                idx = 1;
-            }
-            return idx;
+            return selDevice.privateKeyName ? "ssh key" : "password";
         },
         when: function(answers) {
             return _needInq(mode)(inqChoices) && answers.user === "root";

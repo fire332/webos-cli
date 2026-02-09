@@ -7,7 +7,7 @@
  */
 
 const async = require('async'),
-    inquirer = require('inquirer'),
+    inquirer = require('inquirer').default,
     nopt = require('nopt'),
     log = require('npmlog'),
     path = require('path'),
@@ -161,9 +161,7 @@ function queryInfo(queryFile) {
         question.default = queries[q].default;
         questions.push(question);
     }
-    return inquirer.prompt(questions, function(answers) {
-        return answers;
-    });
+    return inquirer.prompt(questions);
 }
 
 function generate() {

@@ -6,71 +6,76 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-const async = require('async'),
-    fs = require('fs'),
-    nopt = require('nopt'),
-    log = require('npmlog'),
-    path = require('path'),
-    installLib = require('./../lib/install'),
-    commonTools = require('./../lib/base/common-tools'),
-    convertJsonToList = require('./../lib/util/json').convertJsonToList,
-    spinner = require('../lib/util/spinner');
-    
-const version = commonTools.version,
-    cliControl = commonTools.cliControl,
-    help = commonTools.help,
-    setupDevice = commonTools.setupDevice,
-    appdata = commonTools.appdata,
-    errHndl = commonTools.errMsg;
-    
-const processName = path.basename(process.argv[1]).replace(/.js/, '');
+const async = require("async"),
+  fs = require("fs"),
+  nopt = require("nopt"),
+  log = require("npmlog"),
+  path = require("path"),
+  installLib = require("./../lib/install"),
+  commonTools = require("./../lib/base/common-tools"),
+  convertJsonToList = require("./../lib/util/json").convertJsonToList,
+  spinner = require("../lib/util/spinner");
 
-process.on('uncaughtException', function(err) {
-    spinner.stop();
-    log.error('uncaughtException', err.toString());
-    log.verbose('uncaughtException', err.stack);
-    cliControl.end(-1);
+const version = commonTools.version,
+  cliControl = commonTools.cliControl,
+  help = commonTools.help,
+  setupDevice = commonTools.setupDevice,
+  appdata = commonTools.appdata,
+  errHndl = commonTools.errMsg;
+
+const processName = path.basename(process.argv[1]).replace(/.js/, "");
+
+process.on("uncaughtException", function (err) {
+  spinner.stop();
+  log.error("uncaughtException", err.toString());
+  log.verbose("uncaughtException", err.stack);
+  cliControl.end(-1);
 });
 
 if (process.argv.length === 2) {
-    process.argv.splice(2, 0, '--help');
+  process.argv.splice(2, 0, "--help");
 }
 
 const knownOpts = {
-    "device":   [String, null],
-    "device-list":  Boolean,
-    "list":     Boolean,
-    "listfull": Boolean,
-    "type":     [String, null],
-    "install":  path,
-    "remove":   String,
-    "opkg": Boolean,
-    "opkg-param":   [String, null],
-    "version":  Boolean,
-    "help":     Boolean,
-    "hidden-help":      Boolean,
-    "level":    ['silly', 'verbose', 'info', 'http', 'warn', 'error']
+  device: [String, null],
+  "device-list": Boolean,
+  list: Boolean,
+  listfull: Boolean,
+  type: [String, null],
+  install: path,
+  remove: String,
+  opkg: Boolean,
+  "opkg-param": [String, null],
+  version: Boolean,
+  help: Boolean,
+  "hidden-help": Boolean,
+  level: ["silly", "verbose", "info", "http", "warn", "error"],
 };
 
 const shortHands = {
-    "d": ["--device"],
-    "i": ["--install"],
-    "r": ["--remove"],
-    "o": ["--opkg"],
-    "op": ["--opkg-param"],
-    "l": ["--list"],
-    "F": ["--listfull"],
-    "t": ["--type"],
-    "D": ["--device-list"],
-    "V": ["--version"],
-    "h": ["--help"],
-    "hh": ["--hidden-help"],
-    "v": ["--level", "verbose"]
+  d: ["--device"],
+  i: ["--install"],
+  r: ["--remove"],
+  o: ["--opkg"],
+  op: ["--opkg-param"],
+  l: ["--list"],
+  F: ["--listfull"],
+  t: ["--type"],
+  D: ["--device-list"],
+  V: ["--version"],
+  h: ["--help"],
+  hh: ["--hidden-help"],
+  v: ["--level", "verbose"],
 };
-const argv = nopt(knownOpts, shortHands, process.argv, 2 /* drop 'node' & 'ares-*.js' */);
+const argv = nopt(
+  knownOpts,
+  shortHands,
+  process.argv,
+  2 /* drop 'node' & 'ares-*.js' */,
+);
 
 log.heading = processName;
-log.level = argv.level || 'warn';
+log.level = argv.level || "warn";
 installLib.log.level = log.level;
 log.verbose("argv", argv);
 
@@ -85,139 +90,145 @@ log.verbose("argv", argv);
  * each command of webOS CLI print help message with log message.
  */
 if (argv.level) {
-    delete argv.level;
-    if (argv.argv.remain.length === 0 && (Object.keys(argv)).length === 1) {
-        argv.help = true;
-    }
+  delete argv.level;
+  if (argv.argv.remain.length === 0 && Object.keys(argv).length === 1) {
+    argv.help = true;
+  }
 }
 
 const options = {
-        appId: 'com.ares.defaultName',
-        device: argv.device,
-        opkg: argv.opkg || false,
-        opkg_param:  argv['opkg-param']
-    };
+  appId: "com.ares.defaultName",
+  device: argv.device,
+  opkg: argv.opkg || false,
+  opkg_param: argv["opkg-param"],
+};
 
 let op;
-if (argv.help || argv['hidden-help']) {
-    showUsage(argv['hidden-help']);
-    cliControl.end();
+if (argv.help || argv["hidden-help"]) {
+  showUsage(argv["hidden-help"]);
+  cliControl.end();
 } else if (argv.list) {
-    op = list;
+  op = list;
 } else if (argv.listfull) {
-    op = listFull;
+  op = listFull;
 } else if (argv.install) {
-    op = install;
+  op = install;
 } else if (argv.remove) {
-    op = remove;
-} else if (argv['device-list']) {
-    op = deviceList;
+  op = remove;
+} else if (argv["device-list"]) {
+  op = deviceList;
 } else if (argv.version) {
-    version.showVersionAndExit();
+  version.showVersionAndExit();
 } else {
-    op = install;
+  op = install;
 }
 
 if (op) {
-    version.checkNodeVersion(function() {
-        async.series([
-            op.bind(this)
-        ],finish);
-    });
+  version.checkNodeVersion(function () {
+    async.series([op.bind(this)], finish);
+  });
 }
 
 function showUsage(hiddenFlag) {
-    if (hiddenFlag) {
-        help.display(processName, appdata.getConfig(true).profile, hiddenFlag);
-    } else {
-        help.display(processName, appdata.getConfig(true).profile);
-    }
+  if (hiddenFlag) {
+    help.display(processName, appdata.getConfig(true).profile, hiddenFlag);
+  } else {
+    help.display(processName, appdata.getConfig(true).profile);
+  }
 }
 
 function deviceList() {
-    setupDevice.showDeviceList(finish);
+  setupDevice.showDeviceList(finish);
 }
 
 function install() {
-    const pkgPath = argv.install || argv.argv.remain[0];
-    log.info("install()", "pkgPath:", pkgPath);
-    if (!pkgPath) {
-        return finish(errHndl.getErrMsg("EMPTY_VALUE", "PACKAGE_FILE"));
-    } else {
-        if (!fs.existsSync(path.normalize(pkgPath))) {
-            return finish(errHndl.getErrMsg("NOT_EXIST_PATH", pkgPath));
-        }
-        installLib.install(options, pkgPath, finish, outputTxt);
+  const pkgPath = argv.install || argv.argv.remain[0];
+  log.info("install()", "pkgPath:", pkgPath);
+  if (!pkgPath) {
+    return finish(errHndl.getErrMsg("EMPTY_VALUE", "PACKAGE_FILE"));
+  } else {
+    if (!fs.existsSync(path.normalize(pkgPath))) {
+      return finish(errHndl.getErrMsg("NOT_EXIST_PATH", pkgPath));
     }
+    installLib.install(options, pkgPath, finish, outputTxt);
+  }
 }
 
 function list() {
-    installLib.list(options, function(err, pkgs) {
-        let strPkgs = "";
-        if (Array.isArray(pkgs)) {
-            pkgs.forEach(function(pkg) {
-                if (argv.type) {
-                    if (argv.type !== pkg.type) {
-                        return;
-                    }
-                }
-                strPkgs += pkg.id + '\n';
-            });
-        }
-        finish(err, {msg: strPkgs.trim()});
-    }, outputTxt);
+  installLib.list(
+    options,
+    function (err, pkgs) {
+      let strPkgs = "";
+      if (Array.isArray(pkgs)) {
+        pkgs.forEach(function (pkg) {
+          if (argv.type) {
+            if (argv.type !== pkg.type) {
+              return;
+            }
+          }
+          strPkgs += pkg.id + "\n";
+        });
+      }
+      finish(err, { msg: strPkgs.trim() });
+    },
+    outputTxt,
+  );
 }
 
 function listFull() {
-    installLib.list(options, function(err, pkgs) {
-        let strPkgs = "";
-        if (Array.isArray(pkgs)) {
-            pkgs.forEach(function(pkg) {
-                strPkgs += "id : "+ pkg.id + '\n';
-                delete pkg.id;
-                strPkgs += convertJsonToList(pkg, 0) + '\n';
-            });
-        }
-        finish(err, {msg: strPkgs.trim()});
-    }, outputTxt);
+  installLib.list(
+    options,
+    function (err, pkgs) {
+      let strPkgs = "";
+      if (Array.isArray(pkgs)) {
+        pkgs.forEach(function (pkg) {
+          strPkgs += "id : " + pkg.id + "\n";
+          delete pkg.id;
+          strPkgs += convertJsonToList(pkg, 0) + "\n";
+        });
+      }
+      finish(err, { msg: strPkgs.trim() });
+    },
+    outputTxt,
+  );
 }
 
 function remove() {
-    const pkgId = (argv.remove === 'true') ? argv.argv.remain[0] : argv.remove;
-    log.info("remove()", "pkgId:", pkgId);
-    if (!pkgId) {
-        return finish(errHndl.getErrMsg("EMPTY_VALUE", "APP_ID"));
-    }
-    installLib.remove(options, pkgId, finish, outputTxt);
+  const pkgId = argv.remove === "true" ? argv.argv.remain[0] : argv.remove;
+  log.info("remove()", "pkgId:", pkgId);
+  if (!pkgId) {
+    return finish(errHndl.getErrMsg("EMPTY_VALUE", "APP_ID"));
+  }
+  installLib.remove(options, pkgId, finish, outputTxt);
 }
 
 function outputTxt(value) {
-    log.info("outputTxt()", "value:", value);
-    console.log(value);
+  log.info("outputTxt()", "value:", value);
+  console.log(value);
 }
 
 function finish(err, value) {
-    spinner.stop();
+  spinner.stop();
 
-    log.info("finish()");
-    if (err) {
-        // handle err from getErrMsg()
-        if (Array.isArray(err) && err.length > 0) {
-            for (const index in err) {
-                log.error(err[index].heading, err[index].message);
-            }
-            log.verbose(err[0].stack);
-        } else {
-            // handle general err (string & object)
-            log.error(err.toString());
-            log.verbose(err.stack);
-        }
-        cliControl.end(-1);
+  log.info("finish()");
+  if (err) {
+    // handle err from getErrMsg()
+    if (Array.isArray(err) && err.length > 0) {
+      for (const index in err) {
+        log.error(err[index].heading, err[index].message);
+      }
+      log.verbose(err[0].stack);
     } else {
-        log.verbose("finish()", "value:", value);
-        if (value && value.msg) {
-            console.log(value.msg);
-        }
-        cliControl.end();
+      // handle general err (string & object)
+      log.error(err.toString());
+      log.verbose(err.stack);
     }
+    cliControl.end(-1);
+  } else {
+    log.verbose("finish()", "value:", value);
+    if (value && value.msg) {
+      console.log(value.msg);
+    }
+    cliControl.end();
+  }
 }

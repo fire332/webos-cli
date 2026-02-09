@@ -6,55 +6,60 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-const nopt = require('nopt'),
-    log = require('npmlog'),
-    path = require('path'),
-    pullLib = require('./../lib/pull'),
-    commonTools = require('./../lib/base/common-tools'),
-    spinner = require('./../lib/util/spinner');
+const nopt = require("nopt"),
+  log = require("npmlog"),
+  path = require("path"),
+  pullLib = require("./../lib/pull"),
+  commonTools = require("./../lib/base/common-tools"),
+  spinner = require("./../lib/util/spinner");
 
 const version = commonTools.version,
-    cliControl = commonTools.cliControl,
-    help = commonTools.help,
-    setupDevice = commonTools.setupDevice,
-    appdata = commonTools.appdata,
-    errHndl = commonTools.errMsg;
+  cliControl = commonTools.cliControl,
+  help = commonTools.help,
+  setupDevice = commonTools.setupDevice,
+  appdata = commonTools.appdata,
+  errHndl = commonTools.errMsg;
 
-const processName = path.basename(process.argv[1]).replace(/.js/, '');
+const processName = path.basename(process.argv[1]).replace(/.js/, "");
 
-process.on('uncaughtException', function(err) {
-    spinner.stop();
-    log.error('uncaughtException', err.toString());
-    log.verbose('uncaughtException', err.stack);
-    cliControl.end(-1);
+process.on("uncaughtException", function (err) {
+  spinner.stop();
+  log.error("uncaughtException", err.toString());
+  log.verbose("uncaughtException", err.stack);
+  cliControl.end(-1);
 });
 
 if (process.argv.length === 2) {
-    process.argv.splice(2, 0, '--help');
+  process.argv.splice(2, 0, "--help");
 }
 
 const knownOpts = {
-    "device": [ String, null ],
-    "device-list": Boolean,
-    "version": Boolean,
-    "help": Boolean,
-    "ignore": Boolean,
-    "level": ['silly', 'verbose', 'info', 'http', 'warn', 'error']
+  device: [String, null],
+  "device-list": Boolean,
+  version: Boolean,
+  help: Boolean,
+  ignore: Boolean,
+  level: ["silly", "verbose", "info", "http", "warn", "error"],
 };
 
 const shortHands = {
-    "d": ["--device"],
-    "D": ["--device-list"],
-    "V": ["--version"],
-    "h": ["--help"],
-    "i": ["--ignore"],
-    "v": ["--level", "verbose"]
+  d: ["--device"],
+  D: ["--device-list"],
+  V: ["--version"],
+  h: ["--help"],
+  i: ["--ignore"],
+  v: ["--level", "verbose"],
 };
 
-const argv = nopt(knownOpts, shortHands, process.argv, 2 /** drop 'node' &  'ares-install.js'*/);
+const argv = nopt(
+  knownOpts,
+  shortHands,
+  process.argv,
+  2 /** drop 'node' &  'ares-install.js'*/,
+);
 
 log.heading = processName;
-log.level = argv.level || 'warn';
+log.level = argv.level || "warn";
 log.verbose("argv", argv);
 
 /**
@@ -68,89 +73,97 @@ log.verbose("argv", argv);
  * each command of webOS CLI print help message with log message.
  */
 if (argv.level) {
-    delete argv.level;
-    if (argv.argv.remain.length === 0 && (Object.keys(argv)).length === 1) {
-        argv.help = true;
-    }
+  delete argv.level;
+  if (argv.argv.remain.length === 0 && Object.keys(argv).length === 1) {
+    argv.help = true;
+  }
 }
 
 const curConfigData = appdata.getConfig(true);
 if (curConfigData.profile !== "ose" && curConfigData.profile !== "apollo") {
-    return finish(errHndl.getErrMsg("NOT_SUPPORT_COMMOND", curConfigData.profile));
+  return finish(
+    errHndl.getErrMsg("NOT_SUPPORT_COMMOND", curConfigData.profile),
+  );
 }
 
 const options = {
-        appId: 'com.ares.defaultName',
-        device: argv.device,
-        ignore: argv.ignore,
-        sourcePath: argv.argv.remain[0],
-        destinationPath: argv.argv.remain[1]
-    };
+  appId: "com.ares.defaultName",
+  device: argv.device,
+  ignore: argv.ignore,
+  sourcePath: argv.argv.remain[0],
+  destinationPath: argv.argv.remain[1],
+};
 
 let op;
-if (argv['device-list']) {
-    op = deviceList;
+if (argv["device-list"]) {
+  op = deviceList;
 } else if (argv.version) {
-    version.showVersionAndExit();
+  version.showVersionAndExit();
 } else if (argv.help) {
-    showUsage();
-    cliControl.end();
+  showUsage();
+  cliControl.end();
 } else {
-    op = pull;
+  op = pull;
 }
 
 if (op) {
-    version.checkNodeVersion(function() {
-        op(finish);
-    });
+  version.checkNodeVersion(function () {
+    op(finish);
+  });
 }
 
 function showUsage() {
-    help.display(processName, appdata.getConfig(true).profile);
+  help.display(processName, appdata.getConfig(true).profile);
 }
 
 function deviceList() {
-    setupDevice.showDeviceList(finish);
+  setupDevice.showDeviceList(finish);
 }
 
 function pull() {
-    if (!options.destinationPath) {
-        options.destinationPath = '.';
-    }
+  if (!options.destinationPath) {
+    options.destinationPath = ".";
+  }
 
-    if (!options.sourcePath || !options.destinationPath) {
-        showUsage();
-        cliControl.end(-1);
-    }
-    pullLib.pull(options.sourcePath, options.destinationPath, options, finish, outputTxt);
+  if (!options.sourcePath || !options.destinationPath) {
+    showUsage();
+    cliControl.end(-1);
+  }
+  pullLib.pull(
+    options.sourcePath,
+    options.destinationPath,
+    options,
+    finish,
+    outputTxt,
+  );
 }
 
 function outputTxt(value) {
-    log.info("outputTxt()", "value:", value);
-    console.log(value);
+  log.info("outputTxt()", "value:", value);
+  console.log(value);
 }
 
 function finish(err, value) {
-    log.info("finish()");
-    spinner.stop();
-    if (err) {
-        // handle err from getErrMsg()
-        if (Array.isArray(err) && err.length > 0) {
-            for (const index in err) {
-                log.error(err[index].heading, err[index].message);
-            }
-            log.verbose(err[0].stack);
-        } else {
-            // handle general err (string & object)
-            log.error(err.toString());
-            log.verbose(err.stack);
-        }
-        cliControl.end(-1);
+  log.info("finish()");
+  spinner.stop();
+  if (err) {
+    // handle err from getErrMsg()
+    if (Array.isArray(err) && err.length > 0) {
+      for (const index in err) {
+        log.error(err[index].heading, err[index].message);
+      }
+      log.verbose(err[0].stack);
     } else {
-        log.verbose("finish()", "value:", value);
-        if (value && value.msg) {
-            console.log(value.msg);
-        }
-        cliControl.end();
+      // handle general err (string & object)
+      log.error(err.toString());
+      log.verbose(err.stack);
     }
+    cliControl.end(-1);
+  } else {
+    log.verbose("finish()", "value:", value);
+    if (value && value.msg) {
+      console.log(value.msg);
+    }
+    cliControl.end();
+  }
 }

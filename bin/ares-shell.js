@@ -6,127 +6,132 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-const async = require('async'),
-    nopt = require('nopt'),
-    log = require('npmlog'),
-    path = require('path'),
-    shellLib = require('./../lib/shell'),
-    commonTools = require('./../lib/base/common-tools');
+const async = require("async"),
+  nopt = require("nopt"),
+  log = require("npmlog"),
+  path = require("path"),
+  shellLib = require("./../lib/shell"),
+  commonTools = require("./../lib/base/common-tools");
 
 const version = commonTools.version,
-    cliControl = commonTools.cliControl,
-    help = commonTools.help,
-    setupDevice = commonTools.setupDevice,
-    appdata = commonTools.appdata,
-    errHndl = commonTools.errMsg;
+  cliControl = commonTools.cliControl,
+  help = commonTools.help,
+  setupDevice = commonTools.setupDevice,
+  appdata = commonTools.appdata,
+  errHndl = commonTools.errMsg;
 
-const processName = path.basename(process.argv[1]).replace(/.js/, '');
+const processName = path.basename(process.argv[1]).replace(/.js/, "");
 
-process.on('uncaughtException', function(err) {
-    log.error('uncaughtException', err.toString());
-    log.verbose('uncaughtException', err.stack);
-    cliControl.end(-1);
+process.on("uncaughtException", function (err) {
+  log.error("uncaughtException", err.toString());
+  log.verbose("uncaughtException", err.stack);
+  cliControl.end(-1);
 });
 
 const knownOpts = {
-    "device": [String, null],
-    "device-list": Boolean,
-    "display": [String, null],
-    "version": Boolean,
-    "run": [String, null],
-    "help": Boolean,
-    "level": ['silly', 'verbose', 'info', 'http', 'warn', 'error']
+  device: [String, null],
+  "device-list": Boolean,
+  display: [String, null],
+  version: Boolean,
+  run: [String, null],
+  help: Boolean,
+  level: ["silly", "verbose", "info", "http", "warn", "error"],
 };
 
 const shortHands = {
-    "d": ["--device"],
-    "D": ["--device-list"],
-    "dp": ["--display"],
-    "V": ["--version"],
-    "r": ["--run"],
-    "h": ["--help"],
-    "v": ["--level", "verbose"]
+  d: ["--device"],
+  D: ["--device-list"],
+  dp: ["--display"],
+  V: ["--version"],
+  r: ["--run"],
+  h: ["--help"],
+  v: ["--level", "verbose"],
 };
-const argv = nopt(knownOpts, shortHands, process.argv, 2 /* drop 'node' & 'ares-shell.js'*/);
+const argv = nopt(
+  knownOpts,
+  shortHands,
+  process.argv,
+  2 /* drop 'node' & 'ares-shell.js'*/,
+);
 
 log.heading = processName;
-log.level = argv.level || 'warn';
+log.level = argv.level || "warn";
 log.verbose("argv", argv);
 
 const curConfigData = appdata.getConfig(true);
 if (!["ose", "apollo"].includes(curConfigData.profile)) {
-    return finish(errHndl.getErrMsg("NOT_SUPPORT_COMMOND", curConfigData.profile));
+  return finish(
+    errHndl.getErrMsg("NOT_SUPPORT_COMMOND", curConfigData.profile),
+  );
 }
 
 const options = {
-        device: argv.device,
-        display: argv.display
-    };
+  device: argv.device,
+  display: argv.display,
+};
 
 let op;
-if (argv['device-list']) {
-    op = deviceList;
+if (argv["device-list"]) {
+  op = deviceList;
 } else if (argv.version) {
-    version.showVersionAndExit();
+  version.showVersionAndExit();
 } else if (argv.run) {
-    op = run;
+  op = run;
 } else if (argv.help) {
-    showUsage();
-    cliControl.end();
+  showUsage();
+  cliControl.end();
 } else {
-    op = shell;
+  op = shell;
 }
 
 if (op) {
-    version.checkNodeVersion(function() {
-        async.series([
-            op.bind(this)
-        ],finish);
-    });
+  version.checkNodeVersion(function () {
+    async.series([op.bind(this)], finish);
+  });
 }
 
 function showUsage() {
-    help.display(processName, appdata.getConfig(true).profile);
+  help.display(processName, appdata.getConfig(true).profile);
 }
 
 function deviceList() {
-    setupDevice.showDeviceList(finish);
+  setupDevice.showDeviceList(finish);
 }
 
 function run() {
-    if (argv.display !== undefined && isNaN(Number(argv.display))) {
-        return finish(errHndl.getErrMsg("INVALID_DISPLAY"));
-    }
-    shellLib.remoteRun(options, argv.run, finish);
+  if (argv.display !== undefined && isNaN(Number(argv.display))) {
+    return finish(errHndl.getErrMsg("INVALID_DISPLAY"));
+  }
+  shellLib.remoteRun(options, argv.run, finish);
 }
 
 function shell() {
-    if (argv.display !== undefined && isNaN(Number(argv.display))) {
-        return finish(errHndl.getErrMsg("INVALID_DISPLAY"));
-    }
-    shellLib.shell(options, finish);
+  if (argv.display !== undefined && isNaN(Number(argv.display))) {
+    return finish(errHndl.getErrMsg("INVALID_DISPLAY"));
+  }
+  shellLib.shell(options, finish);
 }
 
 function finish(err, value) {
-    log.info("finish()");
-    if (err) {
-        // handle err from getErrMsg()
-        if (Array.isArray(err) && err.length > 0) {
-            for (const index in err) {
-                log.error(err[index].heading, err[index].message);
-            }
-            log.verbose(err[0].stack);
-        } else {
-            // handle general err (string & object)
-            log.error(err.toString());
-            log.verbose(err.stack);
-        }
-        cliControl.end(-1);
+  log.info("finish()");
+  if (err) {
+    // handle err from getErrMsg()
+    if (Array.isArray(err) && err.length > 0) {
+      for (const index in err) {
+        log.error(err[index].heading, err[index].message);
+      }
+      log.verbose(err[0].stack);
     } else {
-        log.verbose("finish()", "value:", value);
-        if (value && value.msg) {
-            console.log(value.msg);
-        }
-        cliControl.end();
+      // handle general err (string & object)
+      log.error(err.toString());
+      log.verbose(err.stack);
     }
+    cliControl.end(-1);
+  } else {
+    log.verbose("finish()", "value:", value);
+    if (value && value.msg) {
+      console.log(value.msg);
+    }
+    cliControl.end();
+  }
 }
